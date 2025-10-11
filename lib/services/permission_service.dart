@@ -1,6 +1,5 @@
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
-import 'package:usage_stats/usage_stats.dart';
 import 'dart:io';
 
 class PermissionService {
@@ -13,12 +12,8 @@ class PermissionService {
   static Future<bool> requestUsageStatsPermission() async {
     try {
       if (Platform.isAndroid) {
-        bool granted = await UsageStats.checkUsagePermission() ?? false;
-        if (!granted) {
-          await UsageStats.grantUsagePermission();
-          granted = await UsageStats.checkUsagePermission() ?? false;
-        }
-        return granted;
+        final result = await platform.invokeMethod('requestUsageStatsPermission');
+        return result ?? false;
       }
       return true;
     } catch (e) {
@@ -65,7 +60,8 @@ class PermissionService {
 
   static Future<bool> hasUsageStatsPermission() async {
     try {
-      return await UsageStats.checkUsagePermission() ?? false;
+      final result = await platform.invokeMethod('hasUsageStatsPermission');
+      return result ?? false;
     } catch (e) {
       return false;
     }

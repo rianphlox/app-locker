@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/permission_service.dart';
+import '../services/platform_service.dart';
 import 'home_screen.dart';
 
 class PermissionsScreen extends StatefulWidget {
@@ -76,6 +77,15 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     await PermissionService.requestIgnoreBatteryOptimization();
   }
 
+  Future<void> _requestAutoStart() async {
+    try {
+      await PlatformService.showToast('Opening device-specific auto-start settings...');
+      await PlatformService.requestAutoStart();
+    } catch (e) {
+      // Handle error silently
+    }
+  }
+
   void _continueToHome() {
     Navigator.pushReplacement(
       context,
@@ -96,7 +106,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isGranted ? const Color(0xFF4DB6AC) : Colors.grey.withOpacity(0.3),
+          color: isGranted ? const Color(0xFF4DB6AC) : Colors.grey.withValues(alpha: 0.3),
           width: isGranted ? 2 : 1,
         ),
       ),
@@ -107,8 +117,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           height: 48,
           decoration: BoxDecoration(
             color: isGranted
-                ? const Color(0xFF4DB6AC).withOpacity(0.2)
-                : Colors.grey.withOpacity(0.2),
+                ? const Color(0xFF4DB6AC).withValues(alpha: 0.2)
+                : Colors.grey.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -280,6 +290,36 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                               SizedBox(width: 8),
                               Text(
                                 'Disable Battery Optimization',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        child: ElevatedButton(
+                          onPressed: _requestAutoStart,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4DB6AC),
+                            padding: const EdgeInsets.all(16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.auto_awesome,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Enable Auto-Start (Device Specific)',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,

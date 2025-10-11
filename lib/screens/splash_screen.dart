@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 40),
             const Text(
-              'App Locker',
+              'QVault',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -78,7 +78,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Protect your privacy',
+              'Secure App Locker',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.white70,

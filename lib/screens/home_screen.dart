@@ -4,6 +4,7 @@ import '../services/app_lock_service.dart';
 import '../services/platform_service.dart';
 import '../models/app_info.dart';
 import '../widgets/app_list_item.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -168,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         title: const Text(
-          'App Locker',
+          'QVault',
           style: TextStyle(
             color: Colors.white,
             fontSize: 20,
@@ -178,7 +179,12 @@ class _HomeScreenState extends State<HomeScreen>
         actions: [
           IconButton(
             onPressed: () {
-              // Settings functionality
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              );
             },
             icon: const Icon(
               Icons.settings,

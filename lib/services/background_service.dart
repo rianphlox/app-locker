@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter_background_service/flutter_background_service.dart';
-import 'package:usage_stats/usage_stats.dart';
 import 'app_lock_service.dart';
 import 'platform_service.dart';
 
@@ -53,19 +52,12 @@ class BackgroundService {
 
   static Future<void> _checkForegroundApp(ServiceInstance service) async {
     try {
-      // Get usage stats for the last few seconds
-      final endTime = DateTime.now();
-      final startTime = endTime.subtract(const Duration(seconds: 5));
+      // Use platform service to get current foreground app
+      final appSwitchEvents = PlatformService.getAppSwitchEvents();
 
-      final queryEvents = await UsageStats.queryEvents(
-        startTime,
-        endTime,
-      );
-
-      if (queryEvents.isNotEmpty) {
-        // Get the most recent app event
-        final lastEvent = queryEvents.last;
-        final packageName = lastEvent.packageName;
+      // Listen for app switch events
+      appSwitchEvents.listen((event) async {
+        final packageName = event['packageName'] as String?;
 
         if (packageName != null && packageName.isNotEmpty) {
           // Check if this app is locked
@@ -75,7 +67,7 @@ class BackgroundService {
             await PlatformService.showUnlockScreen(packageName);
           }
         }
-      }
+      });
     } catch (e) {
       // Handle errors silently
     }

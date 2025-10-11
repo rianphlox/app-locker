@@ -71,7 +71,7 @@ class AppListItem extends StatelessWidget {
                 margin: const EdgeInsets.only(top: 4),
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.2),
+                  color: Colors.orange.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: const Text(
@@ -88,10 +88,10 @@ class AppListItem extends StatelessWidget {
         trailing: Switch(
           value: app.isLocked,
           onChanged: (_) => onToggle(),
-          activeColor: const Color(0xFF4DB6AC),
-          activeTrackColor: const Color(0xFF4DB6AC).withOpacity(0.3),
+          activeThumbColor: const Color(0xFF4DB6AC),
+          activeTrackColor: const Color(0xFF4DB6AC).withValues(alpha: 0.3),
           inactiveThumbColor: Colors.grey,
-          inactiveTrackColor: Colors.grey.withOpacity(0.3),
+          inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
         ),
       ),
     );

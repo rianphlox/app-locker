@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 
 class PlatformService {
   static const MethodChannel _channel = MethodChannel('com.example.newapplocker/platform');
@@ -12,7 +13,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('init');
     } catch (e) {
-      print('Error initializing platform service: $e');
+      debugPrint('Error initializing platform service: $e');
     }
   }
 
@@ -31,7 +32,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('requestAccessibilityPermission');
     } catch (e) {
-      print('Error requesting accessibility permission: $e');
+      debugPrint('Error requesting accessibility permission: $e');
     }
   }
 
@@ -50,7 +51,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('requestDeviceAdminPermission');
     } catch (e) {
-      print('Error requesting device admin permission: $e');
+      debugPrint('Error requesting device admin permission: $e');
     }
   }
 
@@ -61,7 +62,7 @@ class PlatformService {
         'packageNames': packageNames,
       });
     } catch (e) {
-      print('Error setting locked apps: $e');
+      debugPrint('Error setting locked apps: $e');
     }
   }
 
@@ -72,7 +73,7 @@ class PlatformService {
         'enabled': enabled,
       });
     } catch (e) {
-      print('Error enabling accessibility monitoring: $e');
+      debugPrint('Error enabling accessibility monitoring: $e');
     }
   }
 
@@ -83,7 +84,7 @@ class PlatformService {
         'packageName': packageName,
       });
     } catch (e) {
-      print('Error showing unlock screen: $e');
+      debugPrint('Error showing unlock screen: $e');
     }
   }
 
@@ -102,7 +103,7 @@ class PlatformService {
         'packageName': packageName,
       });
     } catch (e) {
-      print('Error killing app: $e');
+      debugPrint('Error killing app: $e');
     }
   }
 
@@ -111,7 +112,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('openAppSettings');
     } catch (e) {
-      print('Error opening app settings: $e');
+      debugPrint('Error opening app settings: $e');
     }
   }
 
@@ -120,7 +121,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('openAccessibilitySettings');
     } catch (e) {
-      print('Error opening accessibility settings: $e');
+      debugPrint('Error opening accessibility settings: $e');
     }
   }
 
@@ -139,7 +140,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('requestSystemAlertWindowPermission');
     } catch (e) {
-      print('Error requesting system alert window permission: $e');
+      debugPrint('Error requesting system alert window permission: $e');
     }
   }
 
@@ -149,7 +150,7 @@ class PlatformService {
       final result = await _channel.invokeMethod('getInstalledApps');
       return List<Map<String, dynamic>>.from(result);
     } catch (e) {
-      print('Error getting installed apps: $e');
+      debugPrint('Error getting installed apps: $e');
       return [];
     }
   }
@@ -162,8 +163,52 @@ class PlatformService {
       });
       return result != null ? List<int>.from(result) : null;
     } catch (e) {
-      print('Error getting app icon: $e');
+      debugPrint('Error getting app icon: $e');
       return null;
+    }
+  }
+
+  // Request auto-start permission for device-specific manufacturers
+  static Future<bool> requestAutoStart() async {
+    try {
+      final result = await _channel.invokeMethod('requestAutoStart');
+      return result ?? false;
+    } catch (e) {
+      debugPrint('Error requesting auto-start: $e');
+      return false;
+    }
+  }
+
+  // Request all necessary permissions for AppLocker
+  static Future<bool> requestAllPermissions() async {
+    try {
+      final result = await _channel.invokeMethod('requestAllPermissions');
+      return result ?? false;
+    } catch (e) {
+      debugPrint('Error requesting all permissions: $e');
+      return false;
+    }
+  }
+
+  // Show native toast message
+  static Future<void> showToast(String message) async {
+    try {
+      await _channel.invokeMethod('showToast', {
+        'message': message,
+      });
+    } catch (e) {
+      debugPrint('Error showing toast: $e');
+    }
+  }
+
+  // Get device information
+  static Future<String> getDeviceInfo() async {
+    try {
+      final result = await _channel.invokeMethod('getDeviceInfo');
+      return result ?? 'Unknown device';
+    } catch (e) {
+      debugPrint('Error getting device info: $e');
+      return 'Error getting device info';
     }
   }
 }

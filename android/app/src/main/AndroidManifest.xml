@@ -45,6 +45,14 @@
             </intent-filter>
         </activity>
 
+        <!-- Unlock Activity -->
+        <activity android:name=".UnlockActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Accessibility Service -->
         <service android:name=".AccessibilityService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"

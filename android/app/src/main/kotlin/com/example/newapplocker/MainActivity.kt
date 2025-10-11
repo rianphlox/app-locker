@@ -18,7 +18,15 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.os.Bundle
 import java.io.ByteArrayOutputStream
+
+// Import our utility classes
+import com.example.newapplocker.utils.ToastUtil
+import com.example.newapplocker.utils.LockUtil
+import com.example.newapplocker.utils.MainUtil
+import com.example.newapplocker.utils.AppUtils
+import com.example.newapplocker.utils.LogUtil
 
 class MainActivity: FlutterActivity() {
     private val PLATFORM_CHANNEL = "com.example.newapplocker/platform"
@@ -29,12 +37,54 @@ class MainActivity: FlutterActivity() {
     private lateinit var sharedPreferences: SharedPreferences
     private var eventSink: EventChannel.EventSink? = null
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Initialize utility classes
+        MainUtil.getInstance().init(this)
+        LogUtil.i("MainActivity", "App started - ${AppUtils.getDeviceInfo()}")
+
+        handleIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        intent?.let {
+            val action = it.getStringExtra("action")
+            val packageName = it.getStringExtra("package_name")
+
+            if (action == "unlock_app" && packageName != null) {
+                // Send the unlock request to Flutter
+                eventSink?.success(mapOf(
+                    "type" to "unlock_request",
+                    "packageName" to packageName
+                ))
+            }
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
         devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
         adminComponent = ComponentName(this, DeviceAdminReceiver::class.java)
         sharedPreferences = getSharedPreferences("app_locker_prefs", Context.MODE_PRIVATE)
+
+        // Setup event channel for unlock requests
+        EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                eventSink = events
+            }
+
+            override fun onCancel(arguments: Any?) {
+                eventSink = null
+            }
+        })
 
         // Setup platform methods channel
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PLATFORM_CHANNEL).setMethodCallHandler { call, result ->
@@ -89,13 +139,26 @@ class MainActivity: FlutterActivity() {
                     val packageName = call.argument<String>("packageName") ?: ""
                     getAppIcon(packageName, result)
                 }
+                "requestAutoStart" -> {
+                    requestAutoStart(result)
+                }
+                "requestAllPermissions" -> {
+                    requestAllPermissions(result)
+                }
+                "showToast" -> {
+                    val message = call.argument<String>("message") ?: ""
+                    showToast(message, result)
+                }
+                "getDeviceInfo" -> {
+                    result.success(AppUtils.getDeviceInfo())
+                }
                 else -> {
                     result.notImplemented()
                 }
             }
         }
 
-        // Setup permissions channel (existing)
+        // Setup permissions channel (updated)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, PERMISSIONS_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "requestDeviceAdmin" -> {
@@ -110,8 +173,11 @@ class MainActivity: FlutterActivity() {
                 "hasAccessibilityPermission" -> {
                     result.success(hasAccessibilityPermission())
                 }
-                "requestUsageStats" -> {
+                "requestUsageStatsPermission" -> {
                     requestUsageStatsPermission(result)
+                }
+                "hasUsageStatsPermission" -> {
+                    result.success(LockUtil.isUsageStatsPermissionGranted(this))
                 }
                 else -> {
                     result.notImplemented()
@@ -160,12 +226,10 @@ class MainActivity: FlutterActivity() {
 
     private fun requestUsageStatsPermission(result: MethodChannel.Result) {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                startActivity(intent)
-            }
+            LockUtil.requestUsageStatsPermission(this)
             result.success(true)
         } catch (e: Exception) {
+            LogUtil.e("MainActivity", "Failed to request usage stats permission: ${e.message}")
             result.success(false)
         }
     }
@@ -285,7 +349,7 @@ class MainActivity: FlutterActivity() {
             for (packageInfo in packages) {
                 try {
                     val applicationInfo = packageInfo.applicationInfo
-                    if (applicationInfo.enabled && packageManager.getLaunchIntentForPackage(packageInfo.packageName) != null) {
+                    if (applicationInfo?.enabled == true && packageManager.getLaunchIntentForPackage(packageInfo.packageName) != null) {
                         val appName = applicationInfo.loadLabel(packageManager).toString()
                         val isSystemApp = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
 
@@ -335,5 +399,58 @@ class MainActivity: FlutterActivity() {
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
         return bitmap
+    }
+
+    // New utility methods
+
+    private fun requestAutoStart(result: MethodChannel.Result) {
+        try {
+            val success = AppUtils.autoStart(this)
+            LogUtil.i("MainActivity", "Auto-start request: $success")
+            result.success(success)
+        } catch (e: Exception) {
+            LogUtil.e("MainActivity", "Failed to request auto-start: ${e.message}")
+            result.success(false)
+        }
+    }
+
+    private fun requestAllPermissions(result: MethodChannel.Result) {
+        try {
+            // Request usage stats permission
+            if (!LockUtil.isUsageStatsPermissionGranted(this)) {
+                LockUtil.requestUsageStatsPermission(this)
+            }
+
+            // Request overlay permission
+            if (!LockUtil.canDrawOverlays(this)) {
+                LockUtil.requestOverlayPermission(this)
+            }
+
+            // Request auto-start permission
+            AppUtils.autoStart(this)
+
+            // Request ignore battery optimization
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                intent.data = Uri.parse("package:$packageName")
+                startActivity(intent)
+            }
+
+            LogUtil.i("MainActivity", "All permissions requested")
+            result.success(true)
+        } catch (e: Exception) {
+            LogUtil.e("MainActivity", "Failed to request all permissions: ${e.message}")
+            result.success(false)
+        }
+    }
+
+    private fun showToast(message: String, result: MethodChannel.Result) {
+        try {
+            ToastUtil.showToast(this, message)
+            result.success(true)
+        } catch (e: Exception) {
+            LogUtil.e("MainActivity", "Failed to show toast: ${e.message}")
+            result.success(false)
+        }
     }
 }

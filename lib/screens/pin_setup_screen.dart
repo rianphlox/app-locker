@@ -5,7 +5,9 @@ import 'dart:convert';
 import 'permissions_screen.dart';
 
 class PinSetupScreen extends StatefulWidget {
-  const PinSetupScreen({super.key});
+  final bool isChangingPin;
+
+  const PinSetupScreen({super.key, this.isChangingPin = false});
 
   @override
   State<PinSetupScreen> createState() => _PinSetupScreenState();
@@ -43,14 +45,24 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     final hashedPin = sha256.convert(bytes).toString();
 
     await prefs.setString('app_pin', hashedPin);
-    await prefs.setBool('first_time', false);
+
+    if (!widget.isChangingPin) {
+      await prefs.setBool('first_time', false);
+    }
 
     if (!mounted) return;
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const PermissionsScreen()),
-    );
+    if (widget.isChangingPin) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN changed successfully')),
+      );
+    } else {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const PermissionsScreen()),
+      );
+    }
   }
 
   Widget _buildPinDot(int index) {
@@ -148,18 +160,20 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                 ),
               ),
               const SizedBox(height: 40),
-              const Text(
-                'Create a PIN',
-                style: TextStyle(
+              Text(
+                widget.isChangingPin ? 'Change PIN' : 'Create a PIN',
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
-                'Enter a 4-digit PIN to secure your apps',
-                style: TextStyle(
+              Text(
+                widget.isChangingPin
+                    ? 'Enter a new 4-digit PIN'
+                    : 'Enter a 4-digit PIN to secure your apps',
+                style: const TextStyle(
                   fontSize: 16,
                   color: Colors.white70,
                 ),
