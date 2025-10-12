@@ -45,16 +45,22 @@ class AccessibilityService : AccessibilityService() {
 
                 // Check if monitoring is enabled
                 val sharedPrefs = getSharedPreferences("app_locker_prefs", MODE_PRIVATE)
-                val isMonitoringEnabled = sharedPrefs.getBoolean("accessibility_service_enabled", false)
+                val isMonitoringEnabled = sharedPrefs.getBoolean("accessibility_monitoring_enabled", false)
+                val lockedApps = sharedPrefs.getStringSet("locked_apps", setOf()) ?: setOf()
+
+                Log.d(TAG, "Monitoring enabled: $isMonitoringEnabled")
+                Log.d(TAG, "Locked apps: ${lockedApps.joinToString(", ")}")
 
                 if (isMonitoringEnabled) {
                     // Check if this app is locked
-                    val lockedApps = sharedPrefs.getStringSet("locked_apps", setOf()) ?: setOf()
-
                     if (lockedApps.contains(packageName) && !isSystemPackage(packageName)) {
-                        Log.d(TAG, "Locked app detected: $packageName")
+                        Log.d(TAG, "LOCKED APP DETECTED - SHOWING UNLOCK SCREEN: $packageName")
                         showUnlockScreen(packageName)
+                    } else {
+                        Log.d(TAG, "App $packageName is not locked or is system package")
                     }
+                } else {
+                    Log.d(TAG, "Accessibility monitoring is disabled")
                 }
 
                 // Send broadcast to notify Flutter app about app switch

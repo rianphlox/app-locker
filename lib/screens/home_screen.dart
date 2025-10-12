@@ -34,36 +34,51 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _loadApps() async {
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final apps = await PlatformService.getInstalledApps();
+      debugPrint('Loaded ${apps.length} apps from platform service');
 
       final systemApps = <AppInfo>[];
       final userApps = <AppInfo>[];
 
       for (final appMap in apps) {
-        final packageName = appMap['packageName'] as String;
-        final appName = appMap['appName'] as String;
-        final isSystemApp = appMap['isSystemApp'] as bool;
+        try {
+          final packageName = appMap['packageName'] as String? ?? 'unknown';
+          final appName = appMap['appName'] as String? ?? 'Unknown App';
+          final isSystemApp = appMap['isSystemApp'] as bool? ?? false;
 
-        // Get app icon
-        final iconData = await PlatformService.getAppIcon(packageName);
-        Uint8List? icon;
-        if (iconData != null) {
-          icon = Uint8List.fromList(iconData);
-        }
+          if (packageName == 'unknown') {
+            debugPrint('Skipping app with unknown package name');
+            continue;
+          }
 
-        final appInfo = AppInfo(
-          packageName: packageName,
-          appName: appName,
-          icon: icon,
-          isSystemApp: isSystemApp,
-          isLocked: await AppLockService.isAppLocked(packageName),
-        );
+          // Get app icon
+          final iconData = await PlatformService.getAppIcon(packageName);
+          Uint8List? icon;
+          if (iconData != null) {
+            icon = Uint8List.fromList(iconData);
+          }
 
-        if (isSystemApp) {
-          systemApps.add(appInfo);
-        } else {
-          userApps.add(appInfo);
+          final appInfo = AppInfo(
+            packageName: packageName,
+            appName: appName,
+            icon: icon,
+            isSystemApp: isSystemApp,
+            isLocked: await AppLockService.isAppLocked(packageName),
+          );
+
+          if (isSystemApp) {
+            systemApps.add(appInfo);
+          } else {
+            userApps.add(appInfo);
+          }
+        } catch (e) {
+          debugPrint('Error processing app: $e');
+          continue;
         }
       }
 
@@ -177,6 +192,23 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         actions: [
+          IconButton(
+            onPressed: _isLoading ? null : _loadApps,
+            icon: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFF4DB6AC),
+                    ),
+                  )
+                : const Icon(
+                    Icons.refresh,
+                    color: Color(0xFF4DB6AC),
+                  ),
+            tooltip: 'Refresh Apps',
+          ),
           IconButton(
             onPressed: () {
               Navigator.push(
@@ -296,20 +328,12 @@ class _HomeScreenState extends State<HomeScreen>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildAppList(_userApps, 'No user apps found'),
-                _buildAppList(_systemApps, 'No system apps found'),
+                _buildAppList(_userApps, 'No user apps found.\nTry tapping the refresh button.'),
+                _buildAppList(_systemApps, 'No system apps found.\nTry tapping the refresh button.'),
               ],
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _loadApps,
-        backgroundColor: const Color(0xFF4DB6AC),
-        child: const Icon(
-          Icons.refresh,
-          color: Colors.white,
-        ),
       ),
     );
   }

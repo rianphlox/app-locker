@@ -10,7 +10,7 @@ class PermissionsScreen extends StatefulWidget {
   State<PermissionsScreen> createState() => _PermissionsScreenState();
 }
 
-class _PermissionsScreenState extends State<PermissionsScreen> {
+class _PermissionsScreenState extends State<PermissionsScreen> with WidgetsBindingObserver {
   bool _usageStatsGranted = false;
   bool _overlayGranted = false;
   bool _accessibilityGranted = false;
@@ -19,7 +19,23 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkPermissions();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Refresh permissions when app comes back to foreground
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissions();
+    }
   }
 
   Future<void> _checkPermissions() async {
@@ -46,8 +62,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
     await PermissionService.requestUsageStatsPermission();
 
-    // Check again after some delay
+    // Check multiple times with increasing delays for better detection
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _checkPermissions();
+
     await Future.delayed(const Duration(seconds: 1));
+    await _checkPermissions();
+
+    await Future.delayed(const Duration(seconds: 2));
     await _checkPermissions();
   }
 
@@ -58,7 +80,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
     await PermissionService.requestOverlayPermission();
 
+    // Check multiple times with increasing delays for better detection
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _checkPermissions();
+
     await Future.delayed(const Duration(seconds: 1));
+    await _checkPermissions();
+
+    await Future.delayed(const Duration(seconds: 2));
     await _checkPermissions();
   }
 
@@ -69,7 +98,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
     await PermissionService.requestAccessibilityPermission();
 
+    // Check multiple times with increasing delays for better detection
+    await Future.delayed(const Duration(milliseconds: 500));
+    await _checkPermissions();
+
     await Future.delayed(const Duration(seconds: 1));
+    await _checkPermissions();
+
+    await Future.delayed(const Duration(seconds: 2));
     await _checkPermissions();
   }
 

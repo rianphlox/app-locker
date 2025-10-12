@@ -58,9 +58,11 @@ class PlatformService {
   // Set locked apps in native service
   static Future<void> setLockedApps(List<String> packageNames) async {
     try {
+      debugPrint('Setting locked apps on native side: $packageNames');
       await _channel.invokeMethod('setLockedApps', {
         'packageNames': packageNames,
       });
+      debugPrint('Successfully set locked apps on native side');
     } catch (e) {
       debugPrint('Error setting locked apps: $e');
     }
@@ -69,9 +71,11 @@ class PlatformService {
   // Enable accessibility monitoring
   static Future<void> enableAccessibilityMonitoring(bool enabled) async {
     try {
+      debugPrint('Setting accessibility monitoring to: $enabled');
       await _channel.invokeMethod('enableAccessibilityMonitoring', {
         'enabled': enabled,
       });
+      debugPrint('Successfully set accessibility monitoring to: $enabled');
     } catch (e) {
       debugPrint('Error enabling accessibility monitoring: $e');
     }
@@ -148,7 +152,21 @@ class PlatformService {
   static Future<List<Map<String, dynamic>>> getInstalledApps() async {
     try {
       final result = await _channel.invokeMethod('getInstalledApps');
-      return List<Map<String, dynamic>>.from(result);
+      debugPrint('Raw result type: ${result.runtimeType}');
+      debugPrint('Raw result: $result');
+
+      if (result is List) {
+        return result.map((item) {
+          if (item is Map) {
+            // Convert Map<Object?, Object?> to Map<String, dynamic>
+            return Map<String, dynamic>.from(item);
+          }
+          return <String, dynamic>{};
+        }).toList();
+      }
+
+      debugPrint('Unexpected result type: ${result.runtimeType}');
+      return [];
     } catch (e) {
       debugPrint('Error getting installed apps: $e');
       return [];

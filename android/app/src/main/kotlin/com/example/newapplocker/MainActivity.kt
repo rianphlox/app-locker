@@ -265,8 +265,10 @@ class MainActivity: FlutterActivity() {
             val editor = sharedPreferences.edit()
             editor.putStringSet("locked_apps", packageNames.toSet())
             editor.apply()
+            LogUtil.i("MainActivity", "Locked apps updated: ${packageNames.size} apps - ${packageNames}")
             result.success(true)
         } catch (e: Exception) {
+            LogUtil.e("MainActivity", "Failed to set locked apps: ${e.message}")
             result.success(false)
         }
     }
@@ -274,10 +276,12 @@ class MainActivity: FlutterActivity() {
     private fun enableAccessibilityMonitoring(enabled: Boolean, result: MethodChannel.Result) {
         try {
             val editor = sharedPreferences.edit()
-            editor.putBoolean("accessibility_service_enabled", enabled)
+            editor.putBoolean("accessibility_monitoring_enabled", enabled)
             editor.apply()
+            LogUtil.i("MainActivity", "Accessibility monitoring set to: $enabled")
             result.success(true)
         } catch (e: Exception) {
+            LogUtil.e("MainActivity", "Failed to set accessibility monitoring: ${e.message}")
             result.success(false)
         }
     }
@@ -343,31 +347,94 @@ class MainActivity: FlutterActivity() {
     private fun getInstalledApps(result: MethodChannel.Result) {
         try {
             val packageManager = packageManager
-            val packages = packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
             val appsList = mutableListOf<Map<String, Any>>()
 
-            for (packageInfo in packages) {
+            // Method 1: Try getting all packages with different flags for MIUI compatibility
+            var packages = try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    packageManager.getInstalledPackages(PackageManager.PackageInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
+                } else {
+                    @Suppress("DEPRECATION")
+                    packageManager.getInstalledPackages(PackageManager.GET_META_DATA)
+                }
+            } catch (e: Exception) {
+                // Fallback for MIUI devices
                 try {
-                    val applicationInfo = packageInfo.applicationInfo
-                    if (applicationInfo?.enabled == true && packageManager.getLaunchIntentForPackage(packageInfo.packageName) != null) {
-                        val appName = applicationInfo.loadLabel(packageManager).toString()
-                        val isSystemApp = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
-
-                        val appMap = mapOf(
-                            "packageName" to packageInfo.packageName,
-                            "appName" to appName,
-                            "isSystemApp" to isSystemApp
-                        )
-                        appsList.add(appMap)
-                    }
-                } catch (e: Exception) {
-                    // Skip apps that can't be processed
+                    @Suppress("DEPRECATION")
+                    packageManager.getInstalledPackages(0)
+                } catch (e2: Exception) {
+                    emptyList()
                 }
             }
 
+            // Method 2: If still empty, try getting applications directly
+            if (packages.isEmpty()) {
+                val applications = try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        packageManager.getInstalledApplications(PackageManager.ApplicationInfoFlags.of(PackageManager.GET_META_DATA.toLong()))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        packageManager.getInstalledApplications(PackageManager.GET_META_DATA)
+                    }
+                } catch (e: Exception) {
+                    @Suppress("DEPRECATION")
+                    packageManager.getInstalledApplications(0)
+                }
+
+                // Convert ApplicationInfo to PackageInfo-like structure
+                for (appInfo in applications) {
+                    try {
+                        val packageInfo = packageManager.getPackageInfo(appInfo.packageName, 0)
+                        packages = packages + packageInfo
+                    } catch (e: Exception) {
+                        // Skip if package info can't be retrieved
+                    }
+                }
+            }
+
+            // Process the packages
+            for (packageInfo in packages) {
+                try {
+                    val applicationInfo = packageInfo.applicationInfo
+                    if (applicationInfo != null && applicationInfo.enabled) {
+                        val appName = try {
+                            applicationInfo.loadLabel(packageManager).toString()
+                        } catch (e: Exception) {
+                            packageInfo.packageName // Fallback to package name
+                        }
+
+                        val isSystemApp = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+
+                        // Include app if it's either:
+                        // 1. A user app with launch intent
+                        // 2. A system app (regardless of launch intent for system apps tab)
+                        val hasLaunchIntent = packageManager.getLaunchIntentForPackage(packageInfo.packageName) != null
+
+                        if (hasLaunchIntent || isSystemApp) {
+                            val appMap = mapOf(
+                                "packageName" to packageInfo.packageName,
+                                "appName" to appName,
+                                "isSystemApp" to isSystemApp,
+                                "hasLaunchIntent" to hasLaunchIntent
+                            )
+                            appsList.add(appMap)
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Log the error but continue processing other apps
+                    android.util.Log.w("QVault", "Error processing app ${packageInfo.packageName}: ${e.message}")
+                }
+            }
+
+            // Sort apps by name for better UX
+            appsList.sortBy { (it["appName"] as String).lowercase() }
+
+            android.util.Log.i("QVault", "Found ${appsList.size} apps (${appsList.count { !(it["isSystemApp"] as Boolean) }} user apps, ${appsList.count { it["isSystemApp"] as Boolean }} system apps)")
+
             result.success(appsList)
         } catch (e: Exception) {
-            result.error("GET_APPS_ERROR", "Failed to get installed apps", e.message)
+            android.util.Log.e("QVault", "Error getting installed apps", e)
+            result.error("GET_APPS_ERROR", "Failed to get installed apps: ${e.message}", e.toString())
         }
     }
 
@@ -453,4 +520,5 @@ class MainActivity: FlutterActivity() {
             result.success(false)
         }
     }
+
 }
