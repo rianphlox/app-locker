@@ -2,4 +2,6 @@
 <resources>
     <string name="app_name">QVault</string>
     <string name="accessibility_service_description">QVault needs this service to monitor when apps are opened and show unlock screens when necessary.</string>
+    <string name="notification_channel_name">App Locker Service</string>
+    <string name="notification_channel_description">Background monitoring for locked apps</string>
 </resources>

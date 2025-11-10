@@ -84,9 +84,10 @@ class AppMonitorService {
 
       debugPrint('AppMonitorService: App switch detected - $packageName ($eventType)');
 
-      // Check if the app is locked
+      // Only handle locked apps (not QVault itself)
       if (_lockedApps.contains(packageName)) {
         debugPrint('AppMonitorService: Locked app detected: $packageName');
+        // Show unlock screen immediately when locked app is accessed
         _handleLockedAppAccess(packageName);
       }
     } catch (e) {

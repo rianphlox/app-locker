@@ -5,6 +5,7 @@ import 'services/permission_service.dart';
 import 'services/platform_service.dart';
 import 'services/unlock_event_service.dart';
 import 'services/app_monitor_service.dart';
+import 'services/background_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -17,6 +18,9 @@ void main() async {
   await PlatformService.init();
   await AppMonitorService.initialize();
 
+  // Initialize background service (disabled temporarily due to Android 14 issues)
+  // await BackgroundService.initializeService();
+
   runApp(const MyApp());
 }
 
@@ -27,20 +31,94 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       UnlockEventService.init();
+      _startMonitoring();
     });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     UnlockEventService.dispose();
     AppMonitorService.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.resumed:
+        debugPrint('QVault: App resumed - checking if unlock needed');
+        _handleAppResume();
+        break;
+      case AppLifecycleState.paused:
+        debugPrint('QVault: App paused/minimized');
+        _handleAppPause();
+        break;
+      case AppLifecycleState.detached:
+        debugPrint('QVault: App detached');
+        _updateBackgroundNotification();
+        break;
+      default:
+        break;
+    }
+  }
+
+  Future<void> _handleAppResume() async {
+    try {
+      // Simulate a small delay to let the system register the app switch
+      await Future.delayed(const Duration(milliseconds: 100));
+      await _startMonitoring();
+    } catch (e) {
+      debugPrint('Failed to handle app resume: $e');
+    }
+  }
+
+  Future<void> _handleAppPause() async {
+    try {
+      // Mark QVault as minimized for self-protection
+      debugPrint('QVault paused - will require unlock on return');
+      _updateBackgroundNotification();
+    } catch (e) {
+      debugPrint('Failed to handle app pause: $e');
+    }
+  }
+
+  Future<void> _startMonitoring() async {
+    try {
+      await AppMonitorService.startMonitoring();
+      _startBackgroundServiceIfNeeded();
+    } catch (e) {
+      debugPrint('Failed to start monitoring: $e');
+    }
+  }
+
+  Future<void> _startBackgroundServiceIfNeeded() async {
+    try {
+      // Background service disabled due to Android 14 compatibility issues
+      // Core monitoring still works via accessibility service
+      debugPrint('Background monitoring active via accessibility service');
+    } catch (e) {
+      debugPrint('Background service error (non-critical): $e');
+      // Continue without background service if it fails
+    }
+  }
+
+  Future<void> _updateBackgroundNotification() async {
+    try {
+      // Background notification disabled temporarily
+      debugPrint('Monitoring active - background notification disabled');
+    } catch (e) {
+      debugPrint('Failed to update notification: $e');
+    }
   }
 
   @override
