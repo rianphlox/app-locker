@@ -36,6 +36,7 @@ class MainActivity: FlutterActivity() {
     private lateinit var adminComponent: ComponentName
     private lateinit var sharedPreferences: SharedPreferences
     private var eventSink: EventChannel.EventSink? = null
+    private var pendingUnlockRequest: Pair<String, String>? = null // (action, packageName)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,11 +60,17 @@ class MainActivity: FlutterActivity() {
             val packageName = it.getStringExtra("package_name")
 
             if (action == "unlock_app" && packageName != null) {
-                // Send the unlock request to Flutter
-                eventSink?.success(mapOf(
-                    "type" to "unlock_request",
-                    "packageName" to packageName
-                ))
+                if (eventSink != null) {
+                    // Flutter is ready, send immediately
+                    eventSink?.success(mapOf(
+                        "type" to "unlock_request",
+                        "packageName" to packageName
+                    ))
+                } else {
+                    // Flutter not ready yet, store for later
+                    pendingUnlockRequest = Pair(action, packageName)
+                    LogUtil.i("MainActivity", "Stored pending unlock request for: $packageName")
+                }
             }
         }
     }
@@ -79,6 +86,16 @@ class MainActivity: FlutterActivity() {
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
                 eventSink = events
+
+                // Process pending unlock request if any
+                pendingUnlockRequest?.let { (action, packageName) ->
+                    LogUtil.i("MainActivity", "Processing pending unlock request for: $packageName")
+                    eventSink?.success(mapOf(
+                        "type" to "unlock_request",
+                        "packageName" to packageName
+                    ))
+                    pendingUnlockRequest = null
+                }
             }
 
             override fun onCancel(arguments: Any?) {

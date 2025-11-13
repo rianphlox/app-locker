@@ -52,20 +52,15 @@ class AccessibilityService : AccessibilityService() {
 
                 Log.d(TAG, "Monitoring enabled: $isMonitoringEnabled")
                 Log.d(TAG, "Locked apps: ${lockedApps.joinToString(", ")}")
+                Log.d(TAG, "Temporarily unlocked apps: ${temporarilyUnlockedApps.joinToString(", ")}")
 
                 // Check if we're switching away from a temporarily unlocked app
                 if (lastActivePackage != null && lastActivePackage != packageName) {
                     if (temporarilyUnlockedApps.contains(lastActivePackage)) {
-                        // App was closed/switched away - check if it's still running
-                        val activityManager = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
-                        val runningApps = activityManager.runningAppProcesses
-                        val isStillRunning = runningApps?.any { it.processName == lastActivePackage } ?: false
-
-                        if (!isStillRunning) {
-                            // App was completely closed, re-enable interception
-                            reEnableInterceptionForApp(lastActivePackage!!)
-                            Log.d(TAG, "App $lastActivePackage closed permanently - re-enabled interception")
-                        }
+                        // App was switched away - re-enable interception after delay
+                        // This is simpler and more reliable than checking running processes
+                        reEnableInterceptionForApp(lastActivePackage!!)
+                        Log.d(TAG, "App $lastActivePackage switched away - re-enabled interception")
                     }
                 }
 

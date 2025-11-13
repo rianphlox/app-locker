@@ -136,6 +136,114 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  Future<void> _showDiagnosticDialog() async {
+    try {
+      // Gather diagnostic information
+      final lockedApps = await AppLockService.getLockedApps();
+      final isAccessibilityEnabled = await PlatformService.isAccessibilityServiceEnabled();
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: const Text(
+            'Diagnostic Information',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDiagnosticRow(
+                'Accessibility Service',
+                isAccessibilityEnabled ? 'ENABLED ✓' : 'DISABLED ✗',
+                isAccessibilityEnabled ? Colors.green : Colors.red,
+              ),
+              const SizedBox(height: 8),
+              _buildDiagnosticRow(
+                'Locked Apps Count',
+                '${lockedApps.length}',
+                lockedApps.isNotEmpty ? Colors.green : Colors.orange,
+              ),
+              const SizedBox(height: 8),
+              if (lockedApps.isNotEmpty) ...[
+                const Text(
+                  'Locked Apps:',
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const SizedBox(height: 4),
+                ...lockedApps.map((app) => Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(
+                    '• $app',
+                    style: const TextStyle(color: Colors.white60, fontSize: 11),
+                  ),
+                )),
+                const SizedBox(height: 12),
+              ],
+              if (!isAccessibilityEnabled)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    '⚠️ Accessibility service is disabled!\nGo to Settings → Accessibility → QVault and turn it ON.',
+                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
+            ],
+          ),
+          actions: [
+            if (!isAccessibilityEnabled)
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  PlatformService.requestAccessibilityPermission();
+                },
+                child: const Text(
+                  'Open Settings',
+                  style: TextStyle(color: Color(0xFF4DB6AC)),
+                ),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Close',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error getting diagnostic info: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildDiagnosticRow(String label, String value, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
+        ),
+        Text(
+          value,
+          style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
   Widget _buildAppList(List<AppInfo> apps, String emptyMessage) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -208,6 +316,14 @@ class _HomeScreenState extends State<HomeScreen>
                     color: Color(0xFF4DB6AC),
                   ),
             tooltip: 'Refresh Apps',
+          ),
+          IconButton(
+            onPressed: _showDiagnosticDialog,
+            icon: const Icon(
+              Icons.info_outline,
+              color: Color(0xFF4DB6AC),
+            ),
+            tooltip: 'Diagnostic Info',
           ),
           IconButton(
             onPressed: () {
