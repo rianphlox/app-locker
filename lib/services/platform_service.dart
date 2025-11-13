@@ -229,4 +229,43 @@ class PlatformService {
       return 'Error getting device info';
     }
   }
+
+  // Temporarily unlock an app (bypass interception after successful PIN)
+  static Future<void> temporarilyUnlockApp(String packageName) async {
+    try {
+      debugPrint('Temporarily unlocking app: $packageName');
+      await _channel.invokeMethod('temporarilyUnlockApp', {
+        'packageName': packageName,
+      });
+      debugPrint('Successfully temporarily unlocked app: $packageName');
+    } catch (e) {
+      debugPrint('Error temporarily unlocking app: $e');
+    }
+  }
+
+  // Re-enable interception for an app (after app closes permanently)
+  static Future<void> reEnableAppInterception(String packageName) async {
+    try {
+      debugPrint('Re-enabling interception for app: $packageName');
+      await _channel.invokeMethod('reEnableAppInterception', {
+        'packageName': packageName,
+      });
+      debugPrint('Successfully re-enabled interception for app: $packageName');
+    } catch (e) {
+      debugPrint('Error re-enabling app interception: $e');
+    }
+  }
+
+  // Launch an app by package name
+  static Future<void> launchApp(String packageName) async {
+    try {
+      debugPrint('Launching app: $packageName');
+      await _channel.invokeMethod('launchApp', {
+        'packageName': packageName,
+      });
+      debugPrint('Successfully launched app: $packageName');
+    } catch (e) {
+      debugPrint('Error launching app: $e');
+    }
+  }
 }

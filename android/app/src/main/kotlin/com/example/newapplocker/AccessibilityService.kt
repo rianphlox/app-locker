@@ -11,6 +11,7 @@ class AccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "AppLockerAccessibility"
         private var instance: AccessibilityService? = null
+        private var lastActivePackage: String? = null
 
         fun getInstance(): AccessibilityService? = instance
 
@@ -47,15 +48,39 @@ class AccessibilityService : AccessibilityService() {
                 val sharedPrefs = getSharedPreferences("app_locker_prefs", MODE_PRIVATE)
                 val isMonitoringEnabled = sharedPrefs.getBoolean("accessibility_monitoring_enabled", false)
                 val lockedApps = sharedPrefs.getStringSet("locked_apps", setOf()) ?: setOf()
+                val temporarilyUnlockedApps = sharedPrefs.getStringSet("temporarily_unlocked_apps", setOf()) ?: setOf()
 
                 Log.d(TAG, "Monitoring enabled: $isMonitoringEnabled")
                 Log.d(TAG, "Locked apps: ${lockedApps.joinToString(", ")}")
 
+                // Check if we're switching away from a temporarily unlocked app
+                if (lastActivePackage != null && lastActivePackage != packageName) {
+                    if (temporarilyUnlockedApps.contains(lastActivePackage)) {
+                        // App was closed/switched away - check if it's still running
+                        val activityManager = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
+                        val runningApps = activityManager.runningAppProcesses
+                        val isStillRunning = runningApps?.any { it.processName == lastActivePackage } ?: false
+
+                        if (!isStillRunning) {
+                            // App was completely closed, re-enable interception
+                            reEnableInterceptionForApp(lastActivePackage!!)
+                            Log.d(TAG, "App $lastActivePackage closed permanently - re-enabled interception")
+                        }
+                    }
+                }
+
+                lastActivePackage = packageName
+
                 if (isMonitoringEnabled) {
                     // Check if this app is locked
                     if (lockedApps.contains(packageName) && !isSystemPackage(packageName)) {
-                        Log.d(TAG, "LOCKED APP DETECTED - SHOWING UNLOCK SCREEN: $packageName")
-                        showUnlockScreen(packageName)
+                        // Check if app is temporarily unlocked
+                        if (temporarilyUnlockedApps.contains(packageName)) {
+                            Log.d(TAG, "App $packageName is temporarily unlocked - allowing access")
+                        } else {
+                            Log.d(TAG, "LOCKED APP DETECTED - SHOWING UNLOCK SCREEN: $packageName")
+                            showUnlockScreen(packageName)
+                        }
                     } else {
                         Log.d(TAG, "App $packageName is not locked or is system package")
                     }
@@ -102,6 +127,20 @@ class AccessibilityService : AccessibilityService() {
             startActivity(intent)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start unlock activity: ${e.message}")
+        }
+    }
+
+    private fun reEnableInterceptionForApp(packageName: String) {
+        try {
+            val sharedPrefs = getSharedPreferences("app_locker_prefs", MODE_PRIVATE)
+            val editor = sharedPrefs.edit()
+            val temporarilyUnlockedApps = sharedPrefs.getStringSet("temporarily_unlocked_apps", setOf())?.toMutableSet() ?: mutableSetOf()
+            temporarilyUnlockedApps.remove(packageName)
+            editor.putStringSet("temporarily_unlocked_apps", temporarilyUnlockedApps)
+            editor.apply()
+            Log.d(TAG, "Re-enabled interception for app: $packageName")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to re-enable interception for app: ${e.message}")
         }
     }
 

@@ -152,6 +152,18 @@ class MainActivity: FlutterActivity() {
                 "getDeviceInfo" -> {
                     result.success(AppUtils.getDeviceInfo())
                 }
+                "temporarilyUnlockApp" -> {
+                    val packageName = call.argument<String>("packageName") ?: ""
+                    temporarilyUnlockApp(packageName, result)
+                }
+                "reEnableAppInterception" -> {
+                    val packageName = call.argument<String>("packageName") ?: ""
+                    reEnableAppInterception(packageName, result)
+                }
+                "launchApp" -> {
+                    val packageName = call.argument<String>("packageName") ?: ""
+                    launchApp(packageName, result)
+                }
                 else -> {
                     result.notImplemented()
                 }
@@ -517,6 +529,56 @@ class MainActivity: FlutterActivity() {
             result.success(true)
         } catch (e: Exception) {
             LogUtil.e("MainActivity", "Failed to show toast: ${e.message}")
+            result.success(false)
+        }
+    }
+
+    private fun temporarilyUnlockApp(packageName: String, result: MethodChannel.Result) {
+        try {
+            val editor = sharedPreferences.edit()
+            val temporarilyUnlockedApps = sharedPreferences.getStringSet("temporarily_unlocked_apps", setOf())?.toMutableSet() ?: mutableSetOf()
+            temporarilyUnlockedApps.add(packageName)
+            editor.putStringSet("temporarily_unlocked_apps", temporarilyUnlockedApps)
+            editor.apply()
+            LogUtil.i("MainActivity", "Temporarily unlocked app: $packageName")
+            result.success(true)
+        } catch (e: Exception) {
+            LogUtil.e("MainActivity", "Failed to temporarily unlock app: ${e.message}")
+            result.success(false)
+        }
+    }
+
+    private fun reEnableAppInterception(packageName: String, result: MethodChannel.Result) {
+        try {
+            val editor = sharedPreferences.edit()
+            val temporarilyUnlockedApps = sharedPreferences.getStringSet("temporarily_unlocked_apps", setOf())?.toMutableSet() ?: mutableSetOf()
+            temporarilyUnlockedApps.remove(packageName)
+            editor.putStringSet("temporarily_unlocked_apps", temporarilyUnlockedApps)
+            editor.apply()
+            LogUtil.i("MainActivity", "Re-enabled interception for app: $packageName")
+            result.success(true)
+        } catch (e: Exception) {
+            LogUtil.e("MainActivity", "Failed to re-enable interception: ${e.message}")
+            result.success(false)
+        }
+    }
+
+    private fun launchApp(packageName: String, result: MethodChannel.Result) {
+        try {
+            val packageManager = packageManager
+            val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                startActivity(launchIntent)
+                LogUtil.i("MainActivity", "Successfully launched app: $packageName")
+                result.success(true)
+            } else {
+                LogUtil.w("MainActivity", "No launch intent found for app: $packageName")
+                result.success(false)
+            }
+        } catch (e: Exception) {
+            LogUtil.e("MainActivity", "Failed to launch app: ${e.message}")
             result.success(false)
         }
     }

@@ -60,14 +60,28 @@ class UnlockEventService {
       // If unlock was successful (result == true), allow the app to continue
       // If cancelled or failed (result == false or null), do nothing (app remains blocked)
       if (result == true) {
-        // App was successfully unlocked, the user can proceed
+        // App was successfully unlocked, temporarily disable interception
         debugPrint('App $packageName unlocked successfully');
+        await PlatformService.temporarilyUnlockApp(packageName);
+
+        // Launch the app that was originally trying to open
+        await _launchApp(packageName);
       } else {
         // App unlock was cancelled or failed
         debugPrint('App $packageName unlock cancelled or failed');
       }
     } catch (e) {
       debugPrint('Error showing unlock screen: $e');
+    }
+  }
+
+  static Future<void> _launchApp(String packageName) async {
+    try {
+      // Use Android intent to launch the app
+      await PlatformService.launchApp(packageName);
+      debugPrint('Launched app: $packageName');
+    } catch (e) {
+      debugPrint('Error launching app $packageName: $e');
     }
   }
 
