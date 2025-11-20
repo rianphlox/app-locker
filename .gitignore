@@ -1,70 +1,101 @@
-# Flutter/Dart/Pub related
+# Flutter/Dart/Pub
 .dart_tool/
 .packages
+.buildlog/
 build/
 pubspec.lock
+
+# Generated files
+flutter_export_environment.sh
 
 # IDEs
 .idea/
 .vscode/
 *.iml
 
-# Android
+# Logs
+*.log
+
+# MacOS system files
+.DS_Store
+
+# ================================================
+# ANDROID
+# ================================================
 android/.gradle/
-android/app/build/
 android/local.properties
 android/key.properties
 *.keystore
 *.jks
 
-# iOS
-ios/Flutter/.last_build_id
+# Android build outputs
+android/app/build/
+android/build/
+
+# ================================================
+# IOS
+# ================================================
+# CocoaPods
 ios/Pods/
+ios/Podfile.lock
 ios/Runner.xcworkspace/
+
+# Xcode build directories
+ios/build/
+ios/DerivedData/
+
+# Flutter iOS artifacts
 ios/Flutter/Flutter.framework
 ios/Flutter/Flutter.podspec
 ios/.symlinks/
-ios/build/
-ios/DerivedData/
-*.xcuserstate
 
-# macOS
+# Xcode user data
+*.xcuserstate
+*.xcworkspace
+*.xcuserdata/
+
+# iOS archive / export files
+*.ipa
+*.xcarchive
+
+# ================================================
+# MACOS
+# ================================================
 macos/Flutter/ephemeral/
 macos/build/
 macos/Pods/
 macos/Runner.xcworkspace/
 
-# Windows
+# ================================================
+# WINDOWS
+# ================================================
 windows/flutter/ephemeral/
 windows/build/
 
-# Linux
+# ================================================
+# LINUX
+# ================================================
 linux/flutter/ephemeral/
 linux/build/
 
-# Web
+# ================================================
+# WEB
+# ================================================
 web/.dart_tool/
-web/.firebase/
 web/.cache/
+web/.firebase/
 
-# Generated plugin registrant
-flutter_export_environment.sh
-
-# Symbolic links
-.symlinks/
-
-# Misc
-*.log
-*.tmp
-*.lock
-*.DS_Store
-!.vscode/settings.json
-!.vscode/launch.json
-!.vscode/tasks.json
-
-# Coverage
+# ================================================
+# TEST / COVERAGE
+# ================================================
 coverage/
 
-# Firebase / secrets
+# Temporary files
+*.tmp
+*.lock
+
+# ================================================
+# Firebase / Secrets
+# ================================================
 google-services.json
 GoogleService-Info.plist
