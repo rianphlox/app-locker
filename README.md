@@ -1,8 +1,3 @@
-Perfect — since the app isn’t yet on the Play Store and no APK is publicly hosted, we’ll make the README **simpler, more natural, and repo-focused** (for devs/testers).
-
-Here’s the **clean, humanized version** of your README — looks professional, readable, and avoids irrelevant sections like installation-from-APK or store links.
-
----
 
 # QVault - Advanced Android App Locker
 
@@ -122,7 +117,7 @@ flutter test
 ## 📄 License
 
 **MIT License**
-Copyright © 2024
+Copyright © 2025
 Free to use, modify, and distribute with attribution.
 
 ---
