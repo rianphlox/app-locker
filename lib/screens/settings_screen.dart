@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:local_auth/local_auth.dart';
 import '../services/app_lock_service.dart';
 import '../services/platform_service.dart';
 import '../services/permission_service.dart';
@@ -13,9 +12,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final LocalAuthentication _localAuth = LocalAuthentication();
-  bool _isBiometricEnabled = false;
-  bool _biometricAvailable = false;
   String _deviceInfo = 'Loading...';
   bool _hasUsageStats = false;
   bool _hasOverlay = false;
@@ -24,73 +20,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSettings();
-    _checkBiometricAvailability();
     _loadDeviceInfo();
     _checkPermissions();
   }
 
-  Future<void> _loadSettings() async {
-    setState(() {
-      _isBiometricEnabled = AppLockService.isBiometricEnabled();
-    });
-  }
 
-  Future<void> _checkBiometricAvailability() async {
-    try {
-      final isAvailable = await _localAuth.canCheckBiometrics;
-      final isDeviceSupported = await _localAuth.isDeviceSupported();
-      setState(() {
-        _biometricAvailable = isAvailable && isDeviceSupported;
-      });
-    } catch (e) {
-      setState(() {
-        _biometricAvailable = false;
-      });
-    }
-  }
 
-  Future<void> _toggleBiometric(bool value) async {
-    if (value) {
-      try {
-        final isAuthenticated = await _localAuth.authenticate(
-          localizedReason: 'Enable biometric authentication for QVault',
-          options: const AuthenticationOptions(
-            biometricOnly: false,
-            stickyAuth: true,
-          ),
-        );
-
-        if (isAuthenticated) {
-          await AppLockService.setBiometricEnabled(true);
-          setState(() {
-            _isBiometricEnabled = true;
-          });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Biometric authentication enabled')),
-            );
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to enable biometric: $e')),
-          );
-        }
-      }
-    } else {
-      await AppLockService.setBiometricEnabled(false);
-      setState(() {
-        _isBiometricEnabled = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Biometric authentication disabled')),
-        );
-      }
-    }
-  }
 
   Future<void> _changePIN() async {
     Navigator.of(context).push(
@@ -208,7 +143,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         content: const Text(
           'QVault respects your privacy. All data is stored locally on your device and is never transmitted to external servers. '
-          'Your PIN and biometric data are securely encrypted and stored only on your device.',
+          'Your PIN is securely encrypted and stored only on your device.',
           style: TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -304,46 +239,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     size: 16,
                   ),
                   onTap: _changePIN,
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4DB6AC),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.fingerprint,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                  title: const Text(
-                    'Biometric Authentication',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  subtitle: Text(
-                    _biometricAvailable
-                        ? 'Use fingerprint or face unlock'
-                        : 'Not available on this device',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                  trailing: Switch(
-                    value: _isBiometricEnabled && _biometricAvailable,
-                    onChanged: _biometricAvailable ? _toggleBiometric : null,
-                    activeTrackColor: const Color(0xFF4DB6AC).withValues(alpha: 0.3),
-                    inactiveThumbColor: Colors.grey,
-                    inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
-                  ),
                 ),
               ],
             ),

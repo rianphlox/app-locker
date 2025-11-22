@@ -97,14 +97,6 @@ class AppLockService {
   }
 
   // Settings
-  static bool isBiometricEnabled() {
-    return _prefs.getBool('biometric_enabled') ?? false;
-  }
-
-  static Future<void> setBiometricEnabled(bool enabled) async {
-    await _prefs.setBool('biometric_enabled', enabled);
-  }
-
   static bool isAutoLockEnabled() {
     return _prefs.getBool('auto_lock_enabled') ?? false;
   }

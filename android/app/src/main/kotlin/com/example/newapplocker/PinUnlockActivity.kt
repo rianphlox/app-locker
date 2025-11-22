@@ -51,7 +51,7 @@ class PinUnlockActivity : Activity() {
         )
         appNameTextView = findViewById<TextView>(R.id.app_name)
         errorMessage = findViewById<TextView>(R.id.error_message)
-        sharedPreferences = getSharedPreferences("app_locker_prefs", MODE_PRIVATE)
+        sharedPreferences = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
     }
 
     private fun setupNumberPad() {
@@ -128,14 +128,43 @@ class PinUnlockActivity : Activity() {
     private fun verifyPin() {
         Log.d(TAG, "🔐 NATIVE PIN: Verifying PIN...")
 
-        val storedPin = sharedPreferences.getString("app_pin", null)
+        // Debug: List all keys in SharedPreferences
+        val allKeys = sharedPreferences.all.keys
+        Log.d(TAG, "🔐 NATIVE PIN DEBUG: Available keys: ${allKeys.joinToString(", ")}")
+
+        // Try multiple possible key formats for Flutter SharedPreferences
+        val possibleKeys = arrayOf(
+            "app_pin",
+            "flutter.app_pin",
+            "flutter.prefs.app_pin"
+        )
+
+        var storedPin: String? = null
+        var keyUsed: String? = null
+
+        for (key in possibleKeys) {
+            val pin = sharedPreferences.getString(key, null)
+            if (pin != null) {
+                storedPin = pin
+                keyUsed = key
+                break
+            }
+        }
+
+        Log.d(TAG, "🔐 NATIVE PIN DEBUG: Key used: $keyUsed, Stored PIN found: ${storedPin != null}")
+
         if (storedPin == null) {
-            Log.e(TAG, "🔐 NATIVE PIN ERROR: No stored PIN found")
+            Log.e(TAG, "🔐 NATIVE PIN ERROR: No stored PIN found with any key")
             showError("No PIN set")
             return
         }
 
         val hashedPin = hashPin(enteredPin)
+
+        Log.d(TAG, "🔐 NATIVE PIN DEBUG: Entered PIN: '$enteredPin'")
+        Log.d(TAG, "🔐 NATIVE PIN DEBUG: Hashed entered PIN: '$hashedPin'")
+        Log.d(TAG, "🔐 NATIVE PIN DEBUG: Stored PIN: '$storedPin'")
+        Log.d(TAG, "🔐 NATIVE PIN DEBUG: Hashes match: ${hashedPin == storedPin}")
 
         if (hashedPin == storedPin) {
             Log.d(TAG, "🔐 NATIVE PIN: PIN CORRECT! Unlocking app $lockedPackage")

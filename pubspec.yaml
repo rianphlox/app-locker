@@ -1,5 +1,5 @@
 name: qvault
-description: A Flutter-based app locker with PIN and biometric authentication.
+description: A Flutter-based app locker with PIN authentication.
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -14,7 +14,6 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   # Core app dependencies
-  local_auth: ^2.1.8
   shared_preferences: ^2.2.3
   permission_handler: ^11.3.1
   flutter_background_service: ^5.0.8
