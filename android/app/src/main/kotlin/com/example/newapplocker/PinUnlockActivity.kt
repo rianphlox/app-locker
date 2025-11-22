@@ -179,6 +179,17 @@ class PinUnlockActivity : Activity() {
 
     private fun unlockApp() {
         try {
+            Log.d(TAG, "🔐 NATIVE PIN: Adding $lockedPackage to temporarily unlocked apps")
+
+            // Add app to temporarily unlocked list BEFORE launching
+            val appLockerPrefs = getSharedPreferences("app_locker_prefs", MODE_PRIVATE)
+            val editor = appLockerPrefs.edit()
+            val temporarilyUnlockedApps = appLockerPrefs.getStringSet("temporarily_unlocked_apps", setOf())?.toMutableSet() ?: mutableSetOf()
+            temporarilyUnlockedApps.add(lockedPackage!!)
+            editor.putStringSet("temporarily_unlocked_apps", temporarilyUnlockedApps)
+            editor.apply()
+
+            Log.d(TAG, "🔐 NATIVE PIN: $lockedPackage added to temporarily unlocked list")
             Log.d(TAG, "🔐 NATIVE PIN: Launching app $lockedPackage")
 
             val packageManager = packageManager

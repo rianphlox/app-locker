@@ -18,9 +18,11 @@
 
 ### 🔐 Security & Protection
 
-* Lock any installed app with **PIN or biometrics**
+* Lock any installed app with **PIN authentication**
 * **Real-time app monitoring** via AccessibilityService
+* **Native Android PIN screen** for seamless unlock experience
 * **Local-only storage** with SHA-256 encryption
+* **Temporary unlock mechanism** - apps stay unlocked until you switch away
 * **Offline operation** — no data collection, no internet required
 
 ### ⚙️ System Integration
@@ -48,12 +50,11 @@ lib/
 └── widgets/             # Shared UI components
 
 android/
-└── java/com/templatemela/applocker/utils/
-    ├── AppUtils.java      # Device-specific settings
-    ├── LockUtil.java      # Permission helpers
-    ├── ToastUtil.java     # Native messages
-    ├── MainUtil.java      # Local data management
-    └── LogUtil.java       # Debug logging
+└── kotlin/com/example/newapplocker/
+    ├── AccessibilityService.kt    # Real-time app monitoring
+    ├── PinUnlockActivity.kt       # Native PIN unlock screen
+    ├── MainActivity.kt            # Flutter bridge
+    └── UnlockActivity.kt          # Flutter unlock interface
 ```
 
 ---
@@ -91,7 +92,8 @@ flutter build apk --release
 
 * ✅ 100% offline — no internet permission
 * ✅ Local-only encrypted storage (SHA-256)
-* ✅ Optional biometric unlock
+* ✅ PIN-only authentication (biometrics removed for simplicity)
+* ✅ Native Android implementation for maximum reliability
 * ✅ Transparent, open-source code
 
 ---
