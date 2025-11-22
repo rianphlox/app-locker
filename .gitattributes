@@ -1,0 +1,29 @@
+# Override GitHub language detection
+*.dart linguist-language=Dart
+*.kt linguist-language=Kotlin
+*.java linguist-language=Java
+
+# Mark generated/build files as generated to exclude from language stats
+build/ linguist-generated=true
+.dart_tool/ linguist-generated=true
+ios/Runner.xcworkspace/ linguist-generated=true
+ios/Runner.xcodeproj/ linguist-generated=true
+android/app/build/ linguist-generated=true
+android/.gradle/ linguist-generated=true
+web/ linguist-generated=true
+windows/ linguist-generated=true
+linux/ linguist-generated=true
+macos/ linguist-generated=true
+
+# Mark Flutter generated files as vendored
+ios/Flutter/ linguist-vendored=true
+android/app/src/main/java/io/flutter/ linguist-vendored=true
+web/icons/ linguist-vendored=true
+pubspec.lock linguist-generated=true
+.flutter-plugins linguist-generated=true
+.flutter-plugins-dependencies linguist-generated=true
+
+# Ensure main source files are properly detected
+lib/*.dart linguist-language=Dart
+android/app/src/main/kotlin/**/*.kt linguist-language=Kotlin
+android/app/src/main/java/**/*.java linguist-language=Java
