@@ -22,16 +22,16 @@ import android.os.Bundle
 import java.io.ByteArrayOutputStream
 
 // Import our utility classes
-import com.example.newapplocker.utils.ToastUtil
-import com.example.newapplocker.utils.LockUtil
-import com.example.newapplocker.utils.MainUtil
-import com.example.newapplocker.utils.AppUtils
-import com.example.newapplocker.utils.LogUtil
+import com.example.newapplocker.utils.ToastUtilManager
+import com.example.newapplocker.utils.LockUtilManager
+import com.example.newapplocker.utils.MainUtilManager
+import com.example.newapplocker.utils.AppUtilsManager
+import com.example.newapplocker.utils.LogUtilManager
 
 class MainActivity: FlutterActivity() {
-    private val PLATFORM_CHANNEL = "com.example.newapplocker/platform"
-    private val EVENT_CHANNEL = "com.example.newapplocker/events"
-    private val PERMISSIONS_CHANNEL = "com.example.newapplocker/permissions"
+    private val PLATFORM_CHANNEL = "app_locker_channel"
+    private val EVENT_CHANNEL = "app_locker_events"
+    private val PERMISSIONS_CHANNEL = "app_locker_permissions"
     private lateinit var devicePolicyManager: DevicePolicyManager
     private lateinit var adminComponent: ComponentName
     private lateinit var sharedPreferences: SharedPreferences
@@ -42,8 +42,8 @@ class MainActivity: FlutterActivity() {
         super.onCreate(savedInstanceState)
 
         // Initialize utility classes
-        MainUtil.getInstance().init(this)
-        LogUtil.i("MainActivity", "App started - ${AppUtils.getDeviceInfo()}")
+        MainUtilManager.getInstance().init(this)
+        LogUtilManager.i("MainActivity", "App started - ${AppUtilsManager.getDeviceInfo()}")
 
         handleIntent(intent)
     }
@@ -55,23 +55,41 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
+        LogUtilManager.i("MainActivity", "🔐 STEP 4: handleIntent called")
+
         intent?.let {
             val action = it.getStringExtra("action")
             val packageName = it.getStringExtra("package_name")
 
-            if (action == "unlock_app" && packageName != null) {
+            LogUtilManager.i("MainActivity", "🔐 STEP 5: Intent received - action: $action, package: $packageName")
+
+            if ((action == "unlock_app" || action == "unlock_app_direct") && packageName != null) {
+                LogUtilManager.i("MainActivity", "🔐 STEP 6: Valid unlock request received for: $packageName")
+
+                if (action == "unlock_app_direct") {
+                    LogUtilManager.i("MainActivity", "🔐 STEP 7: DIRECT unlock mode - should show only PIN screen")
+                    // TODO: Hide normal app UI and show only PIN screen
+                }
+
                 if (eventSink != null) {
+                    LogUtilManager.i("MainActivity", "🔐 STEP 8: EventSink ready, sending unlock event immediately")
                     // Flutter is ready, send immediately
                     eventSink?.success(mapOf(
                         "type" to "unlock_request",
                         "packageName" to packageName
                     ))
+                    LogUtilManager.i("MainActivity", "🔐 STEP 9: Unlock event sent to Flutter")
                 } else {
+                    LogUtilManager.i("MainActivity", "🔐 STEP 8: EventSink not ready, storing pending request")
                     // Flutter not ready yet, store for later
                     pendingUnlockRequest = Pair(action, packageName)
-                    LogUtil.i("MainActivity", "Stored pending unlock request for: $packageName")
+                    LogUtilManager.i("MainActivity", "🔐 STEP 9: Stored pending unlock request for: $packageName")
                 }
+            } else {
+                LogUtilManager.i("MainActivity", "🔐 STEP 6: Intent ignored - not an unlock request")
             }
+        } ?: run {
+            LogUtilManager.i("MainActivity", "🔐 STEP 5: No intent received")
         }
     }
 
@@ -85,15 +103,17 @@ class MainActivity: FlutterActivity() {
         // Setup event channel for unlock requests
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
+                LogUtilManager.i("MainActivity", "🔐 STEP 10: Flutter EventChannel connected")
                 eventSink = events
 
                 // Process pending unlock request if any
                 pendingUnlockRequest?.let { (action, packageName) ->
-                    LogUtil.i("MainActivity", "Processing pending unlock request for: $packageName")
+                    LogUtilManager.i("MainActivity", "🔐 STEP 11: Processing pending unlock request for: $packageName")
                     eventSink?.success(mapOf(
                         "type" to "unlock_request",
                         "packageName" to packageName
                     ))
+                    LogUtilManager.i("MainActivity", "🔐 STEP 12: Pending unlock event sent to Flutter")
                     pendingUnlockRequest = null
                 }
             }
@@ -129,10 +149,7 @@ class MainActivity: FlutterActivity() {
                     val enabled = call.argument<Boolean>("enabled") ?: false
                     enableAccessibilityMonitoring(enabled, result)
                 }
-                "showUnlockScreen" -> {
-                    val packageName = call.argument<String>("packageName") ?: ""
-                    showUnlockScreen(packageName, result)
-                }
+
                 "killApp" -> {
                     val packageName = call.argument<String>("packageName") ?: ""
                     killApp(packageName, result)
@@ -167,7 +184,12 @@ class MainActivity: FlutterActivity() {
                     showToast(message, result)
                 }
                 "getDeviceInfo" -> {
-                    result.success(AppUtils.getDeviceInfo())
+                    result.success(AppUtilsManager.getDeviceInfo())
+                }
+                "getIntentData" -> {
+                    val intent = activity.intent
+                    val lockedPackage = intent.getStringExtra("package_name")
+                    result.success(mapOf("package_name" to lockedPackage))
                 }
                 "temporarilyUnlockApp" -> {
                     val packageName = call.argument<String>("packageName") ?: ""
@@ -206,7 +228,7 @@ class MainActivity: FlutterActivity() {
                     requestUsageStatsPermission(result)
                 }
                 "hasUsageStatsPermission" -> {
-                    result.success(LockUtil.isUsageStatsPermissionGranted(this))
+                    result.success(LockUtilManager.isUsageStatsPermissionGranted(this))
                 }
                 else -> {
                     result.notImplemented()
@@ -255,10 +277,10 @@ class MainActivity: FlutterActivity() {
 
     private fun requestUsageStatsPermission(result: MethodChannel.Result) {
         try {
-            LockUtil.requestUsageStatsPermission(this)
+            LockUtilManager.requestUsageStatsPermission(this)
             result.success(true)
         } catch (e: Exception) {
-            LogUtil.e("MainActivity", "Failed to request usage stats permission: ${e.message}")
+            LogUtilManager.e("MainActivity", "Failed to request usage stats permission: ${e.message}")
             result.success(false)
         }
     }
@@ -294,10 +316,14 @@ class MainActivity: FlutterActivity() {
             val editor = sharedPreferences.edit()
             editor.putStringSet("locked_apps", packageNames.toSet())
             editor.apply()
-            LogUtil.i("MainActivity", "Locked apps updated: ${packageNames.size} apps - ${packageNames}")
+            LogUtilManager.i("MainActivity", "Locked apps updated: ${packageNames.size} apps - ${packageNames}")
+
+            // Update the locked apps in the AccessibilityService
+            AccessibilityService.updateLockedApps(this, packageNames)
+
             result.success(true)
         } catch (e: Exception) {
-            LogUtil.e("MainActivity", "Failed to set locked apps: ${e.message}")
+            LogUtilManager.e("MainActivity", "Failed to set locked apps: ${e.message}")
             result.success(false)
         }
     }
@@ -307,25 +333,15 @@ class MainActivity: FlutterActivity() {
             val editor = sharedPreferences.edit()
             editor.putBoolean("accessibility_monitoring_enabled", enabled)
             editor.apply()
-            LogUtil.i("MainActivity", "Accessibility monitoring set to: $enabled")
+            LogUtilManager.i("MainActivity", "Accessibility monitoring set to: $enabled")
             result.success(true)
         } catch (e: Exception) {
-            LogUtil.e("MainActivity", "Failed to set accessibility monitoring: ${e.message}")
+            LogUtilManager.e("MainActivity", "Failed to set accessibility monitoring: ${e.message}")
             result.success(false)
         }
     }
 
-    private fun showUnlockScreen(packageName: String, result: MethodChannel.Result) {
-        try {
-            val intent = Intent(this, UnlockActivity::class.java)
-            intent.putExtra("package_name", packageName)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(intent)
-            result.success(true)
-        } catch (e: Exception) {
-            result.success(false)
-        }
-    }
+
 
     private fun killApp(packageName: String, result: MethodChannel.Result) {
         try {
@@ -451,18 +467,18 @@ class MainActivity: FlutterActivity() {
                     }
                 } catch (e: Exception) {
                     // Log the error but continue processing other apps
-                    android.util.Log.w("QVault", "Error processing app ${packageInfo.packageName}: ${e.message}")
+                    LogUtilManager.w("QVault", "Error processing app ${packageInfo.packageName}: ${e.message}")
                 }
             }
 
             // Sort apps by name for better UX
             appsList.sortBy { (it["appName"] as String).lowercase() }
 
-            android.util.Log.i("QVault", "Found ${appsList.size} apps (${appsList.count { !(it["isSystemApp"] as Boolean) }} user apps, ${appsList.count { it["isSystemApp"] as Boolean }} system apps)")
+            LogUtilManager.i("QVault", "Found ${appsList.size} apps (${appsList.count { !(it["isSystemApp"] as Boolean) }} user apps, ${appsList.count { it["isSystemApp"] as Boolean }} system apps)")
 
             result.success(appsList)
         } catch (e: Exception) {
-            android.util.Log.e("QVault", "Error getting installed apps", e)
+            LogUtilManager.e("QVault", "Error getting installed apps: ${e.message}")
             result.error("GET_APPS_ERROR", "Failed to get installed apps: ${e.message}", e.toString())
         }
     }
@@ -501,11 +517,11 @@ class MainActivity: FlutterActivity() {
 
     private fun requestAutoStart(result: MethodChannel.Result) {
         try {
-            val success = AppUtils.autoStart(this)
-            LogUtil.i("MainActivity", "Auto-start request: $success")
+            val success = AppUtilsManager.autoStart(this)
+            LogUtilManager.i("MainActivity", "Auto-start request: $success")
             result.success(success)
         } catch (e: Exception) {
-            LogUtil.e("MainActivity", "Failed to request auto-start: ${e.message}")
+            LogUtilManager.e("MainActivity", "Failed to request auto-start: ${e.message}")
             result.success(false)
         }
     }
@@ -513,17 +529,17 @@ class MainActivity: FlutterActivity() {
     private fun requestAllPermissions(result: MethodChannel.Result) {
         try {
             // Request usage stats permission
-            if (!LockUtil.isUsageStatsPermissionGranted(this)) {
-                LockUtil.requestUsageStatsPermission(this)
+            if (!LockUtilManager.isUsageStatsPermissionGranted(this)) {
+                LockUtilManager.requestUsageStatsPermission(this)
             }
 
             // Request overlay permission
-            if (!LockUtil.canDrawOverlays(this)) {
-                LockUtil.requestOverlayPermission(this)
+            if (!LockUtilManager.canDrawOverlays(this)) {
+                LockUtilManager.requestOverlayPermission(this)
             }
 
             // Request auto-start permission
-            AppUtils.autoStart(this)
+            AppUtilsManager.autoStart(this)
 
             // Request ignore battery optimization
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -532,20 +548,20 @@ class MainActivity: FlutterActivity() {
                 startActivity(intent)
             }
 
-            LogUtil.i("MainActivity", "All permissions requested")
+            LogUtilManager.i("MainActivity", "All permissions requested")
             result.success(true)
         } catch (e: Exception) {
-            LogUtil.e("MainActivity", "Failed to request all permissions: ${e.message}")
+            LogUtilManager.e("MainActivity", "Failed to request all permissions: ${e.message}")
             result.success(false)
         }
     }
 
     private fun showToast(message: String, result: MethodChannel.Result) {
         try {
-            ToastUtil.showToast(this, message)
+            ToastUtilManager.showToast(this, message)
             result.success(true)
         } catch (e: Exception) {
-            LogUtil.e("MainActivity", "Failed to show toast: ${e.message}")
+            LogUtilManager.e("MainActivity", "Failed to show toast: ${e.message}")
             result.success(false)
         }
     }
@@ -557,10 +573,10 @@ class MainActivity: FlutterActivity() {
             temporarilyUnlockedApps.add(packageName)
             editor.putStringSet("temporarily_unlocked_apps", temporarilyUnlockedApps)
             editor.apply()
-            LogUtil.i("MainActivity", "Temporarily unlocked app: $packageName")
+            LogUtilManager.i("MainActivity", "Temporarily unlocked app: $packageName")
             result.success(true)
         } catch (e: Exception) {
-            LogUtil.e("MainActivity", "Failed to temporarily unlock app: ${e.message}")
+            LogUtilManager.e("MainActivity", "Failed to temporarily unlock app: ${e.message}")
             result.success(false)
         }
     }
@@ -572,10 +588,10 @@ class MainActivity: FlutterActivity() {
             temporarilyUnlockedApps.remove(packageName)
             editor.putStringSet("temporarily_unlocked_apps", temporarilyUnlockedApps)
             editor.apply()
-            LogUtil.i("MainActivity", "Re-enabled interception for app: $packageName")
+            LogUtilManager.i("MainActivity", "Re-enabled interception for app: $packageName")
             result.success(true)
         } catch (e: Exception) {
-            LogUtil.e("MainActivity", "Failed to re-enable interception: ${e.message}")
+            LogUtilManager.e("MainActivity", "Failed to re-enable interception: ${e.message}")
             result.success(false)
         }
     }
@@ -586,16 +602,16 @@ class MainActivity: FlutterActivity() {
             val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
             if (launchIntent != null) {
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
                 startActivity(launchIntent)
-                LogUtil.i("MainActivity", "Successfully launched app: $packageName")
+                LogUtilManager.i("MainActivity", "Successfully launched app: $packageName")
                 result.success(true)
             } else {
-                LogUtil.w("MainActivity", "No launch intent found for app: $packageName")
+                LogUtilManager.w("MainActivity", "No launch intent found for app: $packageName")
                 result.success(false)
             }
         } catch (e: Exception) {
-            LogUtil.e("MainActivity", "Failed to launch app: ${e.message}")
+            LogUtilManager.e("MainActivity", "Failed to launch app: ${e.message}")
             result.success(false)
         }
     }

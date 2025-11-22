@@ -5,6 +5,7 @@ import '../services/platform_service.dart';
 import '../models/app_info.dart';
 import '../widgets/app_list_item.dart';
 import 'settings_screen.dart';
+import '../services/log_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     try {
       final apps = await PlatformService.getInstalledApps();
-      debugPrint('Loaded ${apps.length} apps from platform service');
+      LogService.logger.i('Loaded ${apps.length} apps from platform service');
 
       final systemApps = <AppInfo>[];
       final userApps = <AppInfo>[];
@@ -52,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen>
           final isSystemApp = appMap['isSystemApp'] as bool? ?? false;
 
           if (packageName == 'unknown') {
-            debugPrint('Skipping app with unknown package name');
+            LogService.logger.w('Skipping app with unknown package name');
             continue;
           }
 
@@ -77,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen>
             userApps.add(appInfo);
           }
         } catch (e) {
-          debugPrint('Error processing app: $e');
+          LogService.logger.e('Error processing app: $e');
           continue;
         }
       }
@@ -187,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withAlpha((255 * 0.1).round()),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(

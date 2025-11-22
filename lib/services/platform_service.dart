@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
-import 'package:flutter/foundation.dart';
+import 'log_service.dart';
 
 class PlatformService {
-  static const MethodChannel _channel = MethodChannel('com.example.newapplocker/platform');
-  static const EventChannel _eventChannel = EventChannel('com.example.newapplocker/events');
+  static const MethodChannel _channel = MethodChannel('app_locker_channel');
+  static const EventChannel _eventChannel = EventChannel('app_locker_events');
 
   static Stream<Map<String, dynamic>>? _appSwitchStream;
 
@@ -13,7 +13,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('init');
     } catch (e) {
-      debugPrint('Error initializing platform service: $e');
+      LogService.logger.e('Error initializing platform service: $e');
     }
   }
 
@@ -32,7 +32,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('requestAccessibilityPermission');
     } catch (e) {
-      debugPrint('Error requesting accessibility permission: $e');
+      LogService.logger.e('Error requesting accessibility permission: $e');
     }
   }
 
@@ -51,33 +51,33 @@ class PlatformService {
     try {
       await _channel.invokeMethod('requestDeviceAdminPermission');
     } catch (e) {
-      debugPrint('Error requesting device admin permission: $e');
+      LogService.logger.e('Error requesting device admin permission: $e');
     }
   }
 
   // Set locked apps in native service
   static Future<void> setLockedApps(List<String> packageNames) async {
     try {
-      debugPrint('Setting locked apps on native side: $packageNames');
+      LogService.logger.i('Setting locked apps on native side: $packageNames');
       await _channel.invokeMethod('setLockedApps', {
         'packageNames': packageNames,
       });
-      debugPrint('Successfully set locked apps on native side');
+      LogService.logger.i('Successfully set locked apps on native side');
     } catch (e) {
-      debugPrint('Error setting locked apps: $e');
+      LogService.logger.e('Error setting locked apps: $e');
     }
   }
 
   // Enable accessibility monitoring
   static Future<void> enableAccessibilityMonitoring(bool enabled) async {
     try {
-      debugPrint('Setting accessibility monitoring to: $enabled');
+      LogService.logger.i('Setting accessibility monitoring to: $enabled');
       await _channel.invokeMethod('enableAccessibilityMonitoring', {
         'enabled': enabled,
       });
-      debugPrint('Successfully set accessibility monitoring to: $enabled');
+      LogService.logger.i('Successfully set accessibility monitoring to: $enabled');
     } catch (e) {
-      debugPrint('Error enabling accessibility monitoring: $e');
+      LogService.logger.e('Error enabling accessibility monitoring: $e');
     }
   }
 
@@ -88,7 +88,7 @@ class PlatformService {
         'packageName': packageName,
       });
     } catch (e) {
-      debugPrint('Error showing unlock screen: $e');
+      LogService.logger.e('Error showing unlock screen: $e');
     }
   }
 
@@ -107,7 +107,7 @@ class PlatformService {
         'packageName': packageName,
       });
     } catch (e) {
-      debugPrint('Error killing app: $e');
+      LogService.logger.e('Error killing app: $e');
     }
   }
 
@@ -116,7 +116,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('openAppSettings');
     } catch (e) {
-      debugPrint('Error opening app settings: $e');
+      LogService.logger.e('Error opening app settings: $e');
     }
   }
 
@@ -125,7 +125,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('openAccessibilitySettings');
     } catch (e) {
-      debugPrint('Error opening accessibility settings: $e');
+      LogService.logger.e('Error opening accessibility settings: $e');
     }
   }
 
@@ -144,7 +144,7 @@ class PlatformService {
     try {
       await _channel.invokeMethod('requestSystemAlertWindowPermission');
     } catch (e) {
-      debugPrint('Error requesting system alert window permission: $e');
+      LogService.logger.e('Error requesting system alert window permission: $e');
     }
   }
 
@@ -152,8 +152,8 @@ class PlatformService {
   static Future<List<Map<String, dynamic>>> getInstalledApps() async {
     try {
       final result = await _channel.invokeMethod('getInstalledApps');
-      debugPrint('Raw result type: ${result.runtimeType}');
-      debugPrint('Raw result: $result');
+      LogService.logger.d('Raw result type: ${result.runtimeType}');
+      LogService.logger.d('Raw result: $result');
 
       if (result is List) {
         return result.map((item) {
@@ -165,10 +165,10 @@ class PlatformService {
         }).toList();
       }
 
-      debugPrint('Unexpected result type: ${result.runtimeType}');
+      LogService.logger.w('Unexpected result type: ${result.runtimeType}');
       return [];
     } catch (e) {
-      debugPrint('Error getting installed apps: $e');
+      LogService.logger.e('Error getting installed apps: $e');
       return [];
     }
   }
@@ -181,7 +181,7 @@ class PlatformService {
       });
       return result != null ? List<int>.from(result) : null;
     } catch (e) {
-      debugPrint('Error getting app icon: $e');
+      LogService.logger.e('Error getting app icon: $e');
       return null;
     }
   }
@@ -192,7 +192,7 @@ class PlatformService {
       final result = await _channel.invokeMethod('requestAutoStart');
       return result ?? false;
     } catch (e) {
-      debugPrint('Error requesting auto-start: $e');
+      LogService.logger.e('Error requesting auto-start: $e');
       return false;
     }
   }
@@ -203,7 +203,7 @@ class PlatformService {
       final result = await _channel.invokeMethod('requestAllPermissions');
       return result ?? false;
     } catch (e) {
-      debugPrint('Error requesting all permissions: $e');
+      LogService.logger.e('Error requesting all permissions: $e');
       return false;
     }
   }
@@ -215,7 +215,7 @@ class PlatformService {
         'message': message,
       });
     } catch (e) {
-      debugPrint('Error showing toast: $e');
+      LogService.logger.e('Error showing toast: $e');
     }
   }
 
@@ -225,47 +225,57 @@ class PlatformService {
       final result = await _channel.invokeMethod('getDeviceInfo');
       return result ?? 'Unknown device';
     } catch (e) {
-      debugPrint('Error getting device info: $e');
+      LogService.logger.e('Error getting device info: $e');
       return 'Error getting device info';
+    }
+  }
+
+  static Future<Map<dynamic, dynamic>> getIntentData() async {
+    try {
+      final result = await _channel.invokeMethod('getIntentData');
+      return result as Map<dynamic, dynamic>;
+    } catch (e) {
+      LogService.logger.e('Error getting intent data: $e');
+      return <dynamic, dynamic>{};
     }
   }
 
   // Temporarily unlock an app (bypass interception after successful PIN)
   static Future<void> temporarilyUnlockApp(String packageName) async {
     try {
-      debugPrint('Temporarily unlocking app: $packageName');
+      LogService.logger.i('Temporarily unlocking app: $packageName');
       await _channel.invokeMethod('temporarilyUnlockApp', {
         'packageName': packageName,
       });
-      debugPrint('Successfully temporarily unlocked app: $packageName');
+      LogService.logger.i('Successfully temporarily unlocked app: $packageName');
     } catch (e) {
-      debugPrint('Error temporarily unlocking app: $e');
+      LogService.logger.e('Error temporarily unlocking app: $e');
     }
   }
 
   // Re-enable interception for an app (after app closes permanently)
   static Future<void> reEnableAppInterception(String packageName) async {
     try {
-      debugPrint('Re-enabling interception for app: $packageName');
+      LogService.logger.i('Re-enabling interception for app: $packageName');
       await _channel.invokeMethod('reEnableAppInterception', {
         'packageName': packageName,
       });
-      debugPrint('Successfully re-enabled interception for app: $packageName');
+      LogService.logger.i('Successfully re-enabled interception for app: $packageName');
     } catch (e) {
-      debugPrint('Error re-enabling app interception: $e');
+      LogService.logger.e('Error re-enabling app interception: $e');
     }
   }
 
   // Launch an app by package name
   static Future<void> launchApp(String packageName) async {
     try {
-      debugPrint('Launching app: $packageName');
+      LogService.logger.i('Launching app: $packageName');
       await _channel.invokeMethod('launchApp', {
         'packageName': packageName,
       });
-      debugPrint('Successfully launched app: $packageName');
+      LogService.logger.i('Successfully launched app: $packageName');
     } catch (e) {
-      debugPrint('Error launching app: $e');
+      LogService.logger.e('Error launching app: $e');
     }
   }
 }

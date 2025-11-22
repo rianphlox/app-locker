@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Selected/Filled state -->
+    <item android:state_selected="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/pin_dot_filled" />
+            <stroke android:width="2dp" android:color="@color/pin_dot_filled" />
+        </shape>
+    </item>
+    <!-- Error state -->
+    <item android:state_pressed="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/pin_dot_error" />
+            <stroke android:width="2dp" android:color="@color/pin_dot_error" />
+        </shape>
+    </item>
+    <!-- Default/Empty state -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/pin_dot_empty" />
+            <stroke android:width="2dp" android:color="@color/pin_dot_filled" />
+        </shape>
+    </item>
+</selector>

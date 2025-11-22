@@ -47,13 +47,25 @@
             </intent-filter>
         </activity>
 
-        <!-- Unlock Activity -->
-        <activity android:name=".UnlockActivity"
+        <!-- Unlock Activity for PIN screen -->
+        <activity
+            android:name=".UnlockActivity"
             android:exported="false"
-            android:launchMode="singleTask"
-            android:excludeFromRecents="true"
+            android:theme="@style/UnlockTheme"
+            android:launchMode="singleTop"
             android:taskAffinity=""
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+            android:excludeFromRecents="true"
+            android:screenOrientation="portrait" />
+
+        <!-- Native PIN Unlock Activity -->
+        <activity
+            android:name=".PinUnlockActivity"
+            android:exported="false"
+            android:theme="@style/UnlockTheme"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:screenOrientation="portrait" />
 
         <!-- Accessibility Service -->
         <service android:name=".AccessibilityService"

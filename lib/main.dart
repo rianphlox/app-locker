@@ -5,7 +5,7 @@ import 'services/permission_service.dart';
 import 'services/platform_service.dart';
 import 'services/unlock_event_service.dart';
 import 'services/app_monitor_service.dart';
-import 'services/background_service.dart';
+import 'services/log_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -13,6 +13,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize services
+  await LogService.init();
   await AppLockService.init();
   await PermissionService.init();
   await PlatformService.init();
@@ -56,15 +57,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     switch (state) {
       case AppLifecycleState.resumed:
-        debugPrint('QVault: App resumed - checking if unlock needed');
+        LogService.logger.i('QVault: App resumed - checking if unlock needed');
         _handleAppResume();
         break;
       case AppLifecycleState.paused:
-        debugPrint('QVault: App paused/minimized');
+        LogService.logger.i('QVault: App paused/minimized');
         _handleAppPause();
         break;
       case AppLifecycleState.detached:
-        debugPrint('QVault: App detached');
+        LogService.logger.i('QVault: App detached');
         _updateBackgroundNotification();
         break;
       default:
@@ -78,17 +79,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       await Future.delayed(const Duration(milliseconds: 100));
       await _startMonitoring();
     } catch (e) {
-      debugPrint('Failed to handle app resume: $e');
+      LogService.logger.e('Failed to handle app resume: $e');
     }
   }
 
   Future<void> _handleAppPause() async {
     try {
       // Mark QVault as minimized for self-protection
-      debugPrint('QVault paused - will require unlock on return');
+      LogService.logger.i('QVault paused - will require unlock on return');
       _updateBackgroundNotification();
     } catch (e) {
-      debugPrint('Failed to handle app pause: $e');
+      LogService.logger.e('Failed to handle app pause: $e');
     }
   }
 
@@ -97,7 +98,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       await AppMonitorService.startMonitoring();
       _startBackgroundServiceIfNeeded();
     } catch (e) {
-      debugPrint('Failed to start monitoring: $e');
+      LogService.logger.e('Failed to start monitoring: $e');
     }
   }
 
@@ -105,9 +106,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     try {
       // Background service disabled due to Android 14 compatibility issues
       // Core monitoring still works via accessibility service
-      debugPrint('Background monitoring active via accessibility service');
+      LogService.logger.i('Background monitoring active via accessibility service');
     } catch (e) {
-      debugPrint('Background service error (non-critical): $e');
+      LogService.logger.e('Background service error (non-critical): $e');
       // Continue without background service if it fails
     }
   }
@@ -115,9 +116,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   Future<void> _updateBackgroundNotification() async {
     try {
       // Background notification disabled temporarily
-      debugPrint('Monitoring active - background notification disabled');
+      LogService.logger.i('Monitoring active - background notification disabled');
     } catch (e) {
-      debugPrint('Failed to update notification: $e');
+      LogService.logger.e('Failed to update notification: $e');
     }
   }
 

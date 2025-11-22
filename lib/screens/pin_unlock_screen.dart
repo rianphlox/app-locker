@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crypto/crypto.dart';
-import 'package:local_auth/local_auth.dart';
 import 'dart:convert';
-import '../services/app_lock_service.dart';
+import '../services/platform_service.dart';
+import '../services/log_service.dart';
 
 class PinUnlockScreen extends StatefulWidget {
   final String lockedAppName;
@@ -23,37 +24,27 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
   String _pin = '';
   final int _pinLength = 4;
   bool _isWrongPin = false;
-  final LocalAuthentication _localAuth = LocalAuthentication();
+  String? lockedPackage;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _checkBiometric();
+    LogService.logger.i('🔐 STEP 24: PinUnlockScreen initState called');
+    LogService.logger.i('🔐 STEP 25: Locked app name from constructor: ${widget.lockedAppName}');
+    LogService.logger.i('🔐 STEP 26: Locked package from constructor: ${widget.lockedPackage}');
+    _getLockedPackage();
   }
 
-  Future<void> _checkBiometric() async {
-    if (AppLockService.isBiometricEnabled()) {
-      try {
-        final bool canCheckBiometrics = await _localAuth.canCheckBiometrics;
-        final bool isDeviceSupported = await _localAuth.isDeviceSupported();
-
-        if (canCheckBiometrics && isDeviceSupported) {
-          final bool didAuthenticate = await _localAuth.authenticate(
-            localizedReason: 'Please verify your identity to unlock ${widget.lockedAppName}',
-            options: const AuthenticationOptions(
-              biometricOnly: false,
-              stickyAuth: true,
-            ),
-          );
-
-          if (didAuthenticate) {
-            _unlockApp();
-          }
-        }
-      } catch (e) {
-        // Biometric authentication failed, continue with PIN
-      }
-    }
+  Future<void> _getLockedPackage() async {
+    LogService.logger.i('🔐 STEP 27: Getting locked package from intent');
+    final intent = await PlatformService.getIntentData();
+    LogService.logger.i('🔐 STEP 28: Intent data received: $intent');
+    setState(() {
+      lockedPackage = intent['package_name'] as String?;
+      _isLoading = false;
+    });
+    LogService.logger.i('🔐 STEP 29: Locked package set to: $lockedPackage, loading complete');
   }
 
   void _onNumberTap(String number) {
@@ -108,8 +99,26 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
     }
   }
 
-  void _unlockApp() {
-    Navigator.of(context).pop(true);
+  void _unlockApp() async {
+    if (lockedPackage == null) {
+      Navigator.pop(context); // safety
+      return;
+    }
+
+    try {
+      LogService.logger.i("PIN correct! Launching app: $lockedPackage");
+
+      // Launch the real app that user wanted to open
+      await PlatformService.launchApp(lockedPackage!);
+
+      LogService.logger.i("App launch triggered for $lockedPackage, closing lock screen");
+
+      // Immediately close lock screen - the real app will come to front
+      SystemNavigator.pop(); // Kills the lock activity completely
+    } catch (e) {
+      LogService.logger.e("Error launching $lockedPackage: $e");
+      // Stay on PIN screen if launch failed
+    }
   }
 
   Widget _buildPinDot(int index) {
@@ -177,32 +186,6 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
     );
   }
 
-  Widget _buildBiometricButton() {
-    if (!AppLockService.isBiometricEnabled()) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      width: 80,
-      height: 80,
-      margin: const EdgeInsets.all(8),
-      child: ElevatedButton(
-        onPressed: _checkBiometric,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shape: const CircleBorder(),
-          side: const BorderSide(color: Colors.white54, width: 2),
-          elevation: 0,
-        ),
-        child: const Icon(
-          Icons.fingerprint,
-          color: Colors.white,
-          size: 24,
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -218,7 +201,9 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
             ),
           ),
           child: SafeArea(
-            child: Column(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator(color: Colors.white))
+                : Column(
               children: [
                 const SizedBox(height: 60),
                 Container(
@@ -258,7 +243,7 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
                     _pinLength,
-                    (index) => _buildPinDot(index),
+                        (index) => _buildPinDot(index),
                   ),
                 ),
                 const SizedBox(height: 80),
@@ -292,7 +277,7 @@ class _PinUnlockScreenState extends State<PinUnlockScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildBiometricButton(),
+                        const SizedBox(width: 96),
                         _buildNumberButton('0'),
                         _buildDeleteButton(),
                       ],

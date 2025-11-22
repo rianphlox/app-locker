@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 
 class PermissionService {
-  static const platform = MethodChannel('com.example.newapplocker/permissions');
+  static const platform = MethodChannel('app_locker_permissions');
 
   static Future<void> init() async {
     // Initialize permission checks

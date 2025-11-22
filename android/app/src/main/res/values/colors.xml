@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pin_bg_color">#FF4DB6AC</color>
+    <color name="pin_subtitle_color">#FFCCCCCC</color>
+    <color name="pin_button_color">#00FFFFFF</color>
+    <color name="pin_button_border">#66FFFFFF</color>
+    <color name="pin_dot_filled">#FFFFFFFF</color>
+    <color name="pin_dot_empty">#00FFFFFF</color>
+    <color name="pin_dot_error">#FFFF4444</color>
+</resources>
